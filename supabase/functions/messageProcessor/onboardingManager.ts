@@ -5,7 +5,7 @@ import { supabase } from "./supabaseClient.ts";
 import { TwilioManager } from "./twilioManager.ts";
 
 export class OnboardingManager {
-    static ONBOARDING_CAMPAIGN_ID = 1;
+    static ONBOARDING_CAMPAIGN_ID = 3;
     static GENERAL_MEDICAL_CAMPAIGN_ID = 2;
 
     static async handleUserOnboarding(message: string, user: WhatsappUser, isNewUser: boolean = false): Promise<boolean> {

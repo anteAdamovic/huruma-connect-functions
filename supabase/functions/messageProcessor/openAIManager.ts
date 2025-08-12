@@ -12,11 +12,16 @@ export class OpenAIManager {
     static async addMessageToThread(userCampaign: WhatsappUserCampaign, content: string, role: string = "user") {
         await CampaignManager.updateCampaignActivity(userCampaign);
 
-        // Insert user message into thread
-        await this.OPENAI.beta.threads.messages.create(userCampaign.thread_id, {
-            role,
-            content
-        });
+        try {
+            // Insert user message into thread
+            await this.OPENAI.beta.threads.messages.create(userCampaign.thread_id, {
+                role,
+                content
+            });
+        } catch (e) {
+            console.log("OpenAIManager.addMessageToThread - ERROR", e);
+            throw e;
+        }
     }
 
     static async runThread(userCampaign: WhatsappUserCampaign, instructions: any = {}) {
@@ -34,7 +39,7 @@ export class OpenAIManager {
         // 3. Start assistant run
         const run = await this.OPENAI.beta.threads.runs.create(userCampaign.thread_id, {
             assistant_id: assistantId,
-            additional_instructions: `User's available data is: ${JSON.stringify(instructions)} and Assistant's available data is: ${JSON.stringify(assistantProfile)}`
+            additional_instructions: `UserData: ${JSON.stringify(instructions)}, AssistantData: ${JSON.stringify(assistantProfile)}`
         });
 
         // 4. Poll until run completes
@@ -42,6 +47,7 @@ export class OpenAIManager {
         let runObj = run;
         while (![
             "completed",
+            "requires_action",
             "failed",
             "canceled",
             "expired"
@@ -51,7 +57,13 @@ export class OpenAIManager {
             status = runObj.status;
         }
 
-        console.log('OpenAIManager.runThread - USAGE', runObj.usage.prompt_tokens, runObj.usage.completion_tokens, runObj.usage.total_tokens);
+        console.log('OpenAIManager.runThread - LOG', runObj);
+        console.log('OpenAIManager.runThread - USAGE', runObj.usage?.prompt_tokens, runObj.usage?.completion_tokens, runObj.usage?.total_tokens);
+
+        if (status === 'requires_action') {
+            console.log('OpenAIManager.runThread - ACTION', runObj.required_action);
+        }
+
         if (status !== "completed") {
             throw new Error(`Run ended in status: ${status}`);
         }
@@ -65,6 +77,7 @@ export class OpenAIManager {
             throw new Error("Assistant produced no response");
         }
 
+        console.log('OpenAIManager.runThread - ASSISTANT REPLY', assistantMsg);
         const reply = assistantMsg.content[0].text.value;
         console.log('OpenAIManager.runThread - REPLY', reply);
         return reply;
@@ -81,7 +94,7 @@ export class OpenAIManager {
             try {
                 const data = JSON.parse(jsonSection);
                 console.log('OpenAIManager.checkForCompletion - PARSED', data);
-                
+
                 return {
                     completion: true,
                     media: 'https://',

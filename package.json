@@ -1,5 +1,10 @@
 {
+  "scripts": {
+    "deploy:messageProcessor": "npx supabase functions deploy messageProcessor --no-verify-jwt"
+  },
   "dependencies": {
+    "csv-parser": "^3.2.0",
+    "pg": "^8.16.3",
     "supabase": "^2.30.4"
   }
 }
